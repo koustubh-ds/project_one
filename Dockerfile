@@ -12,9 +12,13 @@ RUN sh /uv-installer.sh && rm /uv-installer.sh
 # Ensure the installed binary is on the `PATH`
 ENV PATH="/root/.local/bin/:$PATH"
 
+# Install Node.js and npm
+RUN curl -fsSL https://deb.nodesource.com/setup_14.x | bash - && \
+    apt-get install -y nodejs
+
 WORKDIR /app
 
 COPY app.py /app
 
-CMD ["uv","run","app.py"]
+CMD ["uv", "run", "app.py"]
 
