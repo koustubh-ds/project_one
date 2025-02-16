@@ -107,8 +107,8 @@ def call_openai(task: str):
                 "arguments": {"url": "https://api.example.com/data", "output_file": "data/api_data.json"}}
                 ,
                 {"function_name":"clone_and_commit",
-                "sample_prompt": "Clone the git repository at https://example.com and commit the changes with the message 'Update data'",
-                "arguments": {"repo_url": "https://example.com", "commit_message": "Update data"}}
+                "sample_prompt": "Clone a local git repository at '/data/docs/' and commit the changes with the message 'Update data'",
+                "arguments": {"repo_path": "/data/docs/", "commit_message": "Update data"}}
                 ,
                 {"function_name":"run_sql",
                 "sample_prompt": "Run the SQL query 'SELECT * FROM table' on the SQLite database at /data/sample.db",
@@ -405,16 +405,16 @@ def fetch_api_data(url: str, output_file: str):
     return "API data fetched successfully"
 
 # B4. Clone a git repo and make a commit
-def clone_and_commit(repo_url: str, commit_message: str):
+def clone_and_commit(repo_path: str, commit_message: str):
     import git
-    repo_dir = os.path.join("/data", os.path.basename(repo_url))
+    repo_dir = os.path.join("/data", os.path.basename(repo_path))
     if not os.path.exists(repo_dir):
-        git.Repo.clone_from(repo_url, repo_dir)
+        git.Repo.clone_from(repo_path, repo_dir)
     repo = git.Repo(repo_dir)
     repo.git.add(A=True)
     repo.index.commit(commit_message)
     repo.git.push()
-    return f"Committed changes to {repo_url}"
+    return f"Committed changes to {repo_path}"
 
 # B5. Run a SQL query on SQLite or DuckDB
 def run_sql(database_path: str, query: str):
