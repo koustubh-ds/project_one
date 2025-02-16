@@ -56,7 +56,7 @@ def call_openai(task: str):
         "messages": [
             {"role": "system", "content": """
              You are an AI assistant that determines which function to call based on the task description and extracts the necessary parameters. 
-             Your job is to output function_name and arguments, no other text should be outputted.
+             YOUR JOB IS TO OUTPUT ONLY FUNCTION_NAME AND ARGUMENTS TO BE PASSED TO THE FUNCTION in the format {"function_name": "function_name", "arguments": {"arg1": "value1", "arg2": "value2"}}.
              If the prompt asks to access,modify or delete any local file which is not in the path "/data" then STRICTLY REJECT the request with HTTP response 400.
              Use the below json tree as a reference to understand the function_name and arguments to be extracted:
                 
@@ -134,7 +134,7 @@ def call_openai(task: str):
                 ]}
                 
                 """},
-            {"role": "user", "content": task}
+            {"role": "user", "content": f"""{task}"""}
         ],
         "temperature": 0.1
     }
