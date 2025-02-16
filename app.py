@@ -16,6 +16,7 @@
 # ///
 
 from fastapi import FastAPI, Query, HTTPException
+from fastapi.responses import PlainTextResponse, JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 import os
 import json
@@ -83,7 +84,7 @@ def call_openai(task: str):
                 ,
                 {"function_name":"generate_markdown_index",
                 "sample_prompt": "Find all Markdown (.md) files in /data/docs/. For each file, extract the first occurrance of each H1 (i.e. a line starting with # ). Create an index file /data/docs/index.json that maps each filename (without the /data/docs/ prefix) to its title",
-                "arguments": {"input_path": "data/docs", "output_path": "data/index.json"}}
+                "arguments": {"input_path": "data/docs", "output_path": "data/docs/index.json"}}
                 ,
                 {"function_name":"extract_email",
                 "sample_prompt": "Extract the email from the text at data/email.txt and save it at data/extracted_email.txt",
@@ -143,6 +144,23 @@ def call_openai(task: str):
         return response.json().get("choices")[0]["message"]["content"]
     raise HTTPException(status_code=500, detail="Failed to get response from OpenAI")
 
+def get_path_after_data(full_path: str) -> str:
+    """
+    Extracts the path after data/ in the given full path.
+    
+    Args:
+        full_path (str): The full path from which to extract the sub-path after /data/.
+    
+    Returns:
+        str: The extracted sub-path after data/.
+    """
+    data_prefix = "data/"
+    if data_prefix in full_path:
+        return full_path.split(data_prefix, 1)[1]
+    else:
+        raise ValueError(f"The path '{full_path}' does not contain the prefix '{data_prefix}'")
+
+
 # A1. Install UV, Run script on email ID
 def install_uv_and_run_script(script_url: str, email: str):
     try:
@@ -158,7 +176,7 @@ def install_uv_and_run_script(script_url: str, email: str):
 
 # A2. Format markdown file using Prettier
 def format_markdown(file_path: str, prettier_version: str = "3.4.2"):
-    file_path = os.path.join("/data", os.path.basename(file_path))
+    file_path = os.path.join("/data/", get_path_after_data(file_path))
 
     if prettier_version:  
         subprocess.run(["npm", "install", "-g", f"prettier@{prettier_version}"], check=True)
@@ -170,8 +188,8 @@ def format_markdown(file_path: str, prettier_version: str = "3.4.2"):
 
 # A3. Count days of the week in a list of dates
 def count_days(dates_file: str, output_file: str, day_of_week: str):
-    dates_file = os.path.join("/data", os.path.basename(dates_file))
-    output_file = os.path.join("/data", os.path.basename(output_file))
+    dates_file = os.path.join("/data/", get_path_after_data(dates_file))
+    output_file = os.path.join("/data/", get_path_after_data(output_file))
     if not os.path.exists(dates_file):
         raise FileNotFoundError(f"File not found: {dates_file} (Current working directory: {os.getcwd()})")
     days_map = {"Monday": 0, "Tuesday": 1, "Wednesday": 2, "Thursday": 3, 
@@ -212,8 +230,8 @@ def count_days(dates_file: str, output_file: str, day_of_week: str):
 
 # A4. Sort contacts by custom fields
 def sort_contacts(input_file: str, output_file: str, sort_fields: list):
-    input_file = os.path.join("/data", os.path.basename(input_file))
-    output_file = os.path.join("/data", os.path.basename(output_file))
+    input_file = os.path.join("/data/", get_path_after_data(input_file))
+    output_file = os.path.join("/data/", get_path_after_data(output_file))
     with open(input_file) as f:
         contacts = json.load(f)
     contacts.sort(key=lambda c: tuple(c[field] for field in sort_fields))
@@ -223,8 +241,8 @@ def sort_contacts(input_file: str, output_file: str, sort_fields: list):
 
 # A5. Get first 'n' lines of recent log files
 def get_recent_log_lines(logs_dir: str, output_file: str, n: int = 10):
-    logs_dir = os.path.join("/data", os.path.basename(logs_dir))
-    output_file = os.path.join("/data", os.path.basename(output_file))
+    logs_dir = os.path.join("/data/", get_path_after_data(logs_dir))
+    output_file = os.path.join("/data/", get_path_after_data(output_file))
     log_files = [os.path.join(logs_dir, f) for f in os.listdir(logs_dir) if f.endswith(".log")]
     log_files.sort(key=os.path.getmtime, reverse=True)
     recent_lines = []
@@ -242,8 +260,8 @@ def get_recent_log_lines(logs_dir: str, output_file: str, n: int = 10):
 
 # A6. Generate Markdown index from H1 tags in a path
 def generate_markdown_index(input_path: str, output_path: str):
-    input_path = os.path.join("/data", os.path.basename(input_path))
-    output_path = os.path.join("/data", os.path.basename(output_path))
+    input_path = os.path.join("/data/", get_path_after_data(input_path))
+    output_path = os.path.join("/data/", get_path_after_data(output_path))
     index = {}
     for root, _, files in os.walk(input_path):
         for file in files:
@@ -260,8 +278,8 @@ def generate_markdown_index(input_path: str, output_path: str):
 
 # A7. Extract email from text
 def extract_email(input_file: str, output_file: str):
-    input_file = os.path.join("/data", os.path.basename(input_file))
-    output_file = os.path.join("/data", os.path.basename(output_file))
+    input_file = os.path.join("/data/", get_path_after_data(input_file))
+    output_file = os.path.join("/data/", get_path_after_data(output_file))
     with open(input_file) as f:
         email_content = f.read()
     url = "https://aiproxy.sanand.workers.dev/openai/v1/chat/completions"
@@ -284,8 +302,8 @@ def extract_email(input_file: str, output_file: str):
 
 # A8. Extract number sequence from image
 def number_extraction(image_path: str, output_path: str):
-    image_path = os.path.join("/data", os.path.basename(image_path))
-    output_path = os.path.join("/data", os.path.basename(output_path))
+    image_path = os.path.join("/data/", get_path_after_data(image_path))
+    output_path = os.path.join("/data/", get_path_after_data(output_path))
     url = "https://aiproxy.sanand.workers.dev/openai/v1/chat/completions"
     headers = {"Authorization": f"Bearer {AIPROXY_TOKEN}", "Content-Type": "application/json"}
     
@@ -318,8 +336,8 @@ def number_extraction(image_path: str, output_path: str):
 
 # A9. Find similar comments from a list
 def find_similar_comments(input_file: str, output_file: str):
-    input_file = os.path.join("/data", os.path.basename(input_file))
-    output_file = os.path.join("/data", os.path.basename(output_file))
+    input_file = os.path.join("/data/", get_path_after_data(input_file))
+    output_file = os.path.join("/data/", get_path_after_data(output_file))
     
     url = "https://aiproxy.sanand.workers.dev/openai/v1/embeddings"
     headers = {"Authorization": f"Bearer {AIPROXY_TOKEN}", "Content-Type": "application/json"}
@@ -380,7 +398,7 @@ def sql_query(prompt):
     sql_query = extracted_info['sql_query']
     
     try:
-        database_path = os.path.join("/data", os.path.basename(database_path))
+        database_path = os.path.join("/data/", get_path_after_data(database_path))
         conn = sqlite3.connect(database_path)
         cursor = conn.cursor()
         cursor.execute(sql_query)
@@ -389,7 +407,7 @@ def sql_query(prompt):
     except Exception as e:
         raise RuntimeError(f"Database query execution failed: {str(e)}")
     
-    output_path = os.path.join("/data", os.path.basename(output_path))
+    output_path = os.path.join("/data/", get_path_after_data(output_path))
     with open(output_path, 'w') as file:
         for row in result:
             file.write(" ".join(map(str, row)) + "\n")
@@ -398,7 +416,7 @@ def sql_query(prompt):
 
 # B3. Fetch data from an API
 def fetch_api_data(url: str, output_file: str):
-    output_file = os.path.join("/data", os.path.basename(output_file))
+    output_file = os.path.join("/data/", get_path_after_data(output_file))
     response = requests.get(url)
     with open(output_file, "w") as f:
         json.dump(response.json(), f, indent=2)
@@ -407,7 +425,7 @@ def fetch_api_data(url: str, output_file: str):
 # B4. Clone a git repo and make a commit
 def clone_and_commit(repo_path: str, commit_message: str):
     import git
-    repo_dir = os.path.join("/data", os.path.basename(repo_path))
+    repo_dir = os.path.join("/data/", get_path_after_data(repo_path))
     if not os.path.exists(repo_dir):
         git.Repo.clone_from(repo_path, repo_dir)
     repo = git.Repo(repo_dir)
@@ -436,7 +454,7 @@ def scrape_website(url: str):
 # B7. Compress or resize an image
 def resize_image(image_path: str, width: int, height: int):
     import cv2
-    image_path = os.path.join("/data", os.path.basename(image_path))
+    image_path = os.path.join("/data/", get_path_after_data(image_path))
     image = cv2.imread(image_path)
     if image is None:
         raise FileNotFoundError(f"Image not found: {image_path}")
@@ -447,7 +465,7 @@ def resize_image(image_path: str, width: int, height: int):
 # B8. Transcribe audio from an MP3 file
 def transcribe_audio(audio_path: str):
     import speech_recognition as sr
-    audio_path = os.path.join("/data", os.path.basename(audio_path))
+    audio_path = os.path.join("/data/", get_path_after_data(audio_path))
     recognizer = sr.Recognizer()
     with sr.AudioFile(audio_path) as source:
         audio = recognizer.record(source)
@@ -455,7 +473,7 @@ def transcribe_audio(audio_path: str):
 
 # B9. Convert Markdown to HTML
 def markdown_to_html(md_content: str):
-    md_content = os.path.join("/data", os.path.basename(md_content))
+    md_content = os.path.join("/data/", get_path_after_data(md_content))
     with open(md_content, "r", encoding="utf-8") as f:
         md_text = f.read()
     import markdown
@@ -500,9 +518,18 @@ def run_task(task: str = Query(...)):
 def read_file(path: str = Query(...)):
     if not path.startswith("/data/"):
         raise HTTPException(status_code=400, detail="Invalid path")
+    
     if os.path.exists(path):
         with open(path, "r") as file:
-            return {"content": file.read()}
+            content = file.read()
+        
+        # Try parsing as JSON
+        try:
+            json_content = json.loads(content)
+            return JSONResponse(content=json_content)  # Return as JSON if valid
+        except json.JSONDecodeError:
+            return PlainTextResponse(content)  # Return as plain text if not JSON
+
     raise HTTPException(status_code=404, detail="File not found")
 
 if __name__ == "__main__":
